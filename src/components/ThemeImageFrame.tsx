@@ -22,7 +22,7 @@ function applyDualBorderFrameMetrics(frame: HTMLDivElement, w: number, h: number
   setFrameMetrics(frame, w, h);
 }
 
-function fitImageToBounds(img: HTMLImageElement) {
+function fitImageToBounds(img: HTMLImageElement, allowUpscale = false) {
   const nw = img.naturalWidth;
   const nh = img.naturalHeight;
   if (!nw || !nh) return null;
@@ -35,7 +35,8 @@ function fitImageToBounds(img: HTMLImageElement) {
   const maxH = Number.parseFloat(styles.maxHeight);
   const boundsW = Number.isFinite(maxW) && maxW > 0 ? maxW : nw;
   const boundsH = Number.isFinite(maxH) && maxH > 0 ? maxH : nh;
-  const scale = Math.min(boundsW / nw, boundsH / nh, 1);
+  const scaleCap = allowUpscale ? Number.POSITIVE_INFINITY : 1;
+  const scale = Math.min(boundsW / nw, boundsH / nh, scaleCap);
   const w = Math.max(1, Math.round(nw * scale));
   const h = Math.max(1, Math.round(nh * scale));
 
@@ -55,6 +56,8 @@ type ThemeImageFrameProps = {
   bottomOverlay?: ReactNode;
   /** Imperius hero/modal: klasik çerçeve + 3 katman electric overlay */
   dualElectricBorder?: boolean;
+  /** showcase/hero: görseli sınırlara kadar büyüt (native boyutu aşabilir) */
+  showcaseFill?: boolean;
 };
 
 function electricVariantForFrame(
@@ -75,6 +78,7 @@ export function ThemeImageFrame({
   className,
   bottomOverlay,
   dualElectricBorder = false,
+  showcaseFill = false,
 }: ThemeImageFrameProps) {
   const { primary, accent, glow } = character.colors;
   const frameClass =
@@ -146,7 +150,9 @@ export function ThemeImageFrame({
       }
 
       const fitted =
-        variant === "showcase" || variant === "hero" ? fitImageToBounds(img) : null;
+        variant === "showcase" || variant === "hero"
+          ? fitImageToBounds(img, showcaseFill)
+          : null;
 
       const w = fitted?.w ?? img.clientWidth;
       const h = fitted?.h ?? img.clientHeight;
@@ -172,7 +178,7 @@ export function ThemeImageFrame({
       img.removeEventListener("load", apply);
       window.removeEventListener("resize", apply);
     };
-  }, [src, syncBorderToImage, variant, dualElectricBorder]);
+  }, [src, syncBorderToImage, variant, dualElectricBorder, showcaseFill]);
 
   const frameInner = (
     <div className="theme-image-frame__inner">

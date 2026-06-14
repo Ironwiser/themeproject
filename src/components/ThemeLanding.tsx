@@ -1,6 +1,7 @@
 import { useEffect, useRef, type CSSProperties } from "react";
 import { getCharacterDisplayName, type CharacterTheme } from "../data/characters";
 import { ElectricBorder } from "./ElectricBorder";
+import { LandingEmberEffect } from "./LandingEmberEffect";
 import { ThemeImageFrame } from "./ThemeImageFrame";
 import { cn } from "../lib/utils";
 
@@ -27,6 +28,7 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
   const isHoveringTileRef = useRef(false);
 
   const imperius = characters.find((c) => c.id === "imperius");
+  const candyAndBlood = characters.find((c) => c.id === "candyandblood");
 
   useEffect(() => {
     void labelVideoRef.current?.play().catch(() => {});
@@ -57,9 +59,11 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
     void video.play().catch(() => {});
   };
 
-  const tiles = QUADRANTS.map((q) =>
-    q.position === "top-left" ? { ...q, character: imperius } : q
-  );
+  const tiles = QUADRANTS.map((q) => {
+    if (q.position === "top-left") return { ...q, character: imperius };
+    if (q.position === "top-right") return { ...q, character: candyAndBlood };
+    return q;
+  });
 
   return (
     <div className="theme-landing" role="dialog" aria-label="Karakter seçimi">
@@ -76,13 +80,14 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
               type="button"
               className={cn(
                 "theme-landing__cell theme-landing__cell--active",
-                `theme-landing__cell--${position}`
+                `theme-landing__cell--${position}`,
+                character.id === "candyandblood" && "theme-landing__cell--natural-img theme-landing__cell--ember"
               )}
               onClick={() => onSelect(character.id)}
-              onMouseEnter={handleTileEnter}
-              onMouseLeave={handleTileLeave}
-              onFocus={handleTileEnter}
-              onBlur={handleTileLeave}
+              onMouseEnter={character.media.video ? handleTileEnter : undefined}
+              onMouseLeave={character.media.video ? handleTileLeave : undefined}
+              onFocus={character.media.video ? handleTileEnter : undefined}
+              onBlur={character.media.video ? handleTileLeave : undefined}
               style={
                 {
                   "--tile-primary": character.colors.primary,
@@ -99,6 +104,8 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
                 character={character}
                 className="theme-landing__frame"
               />
+
+              {character.id === "candyandblood" && <LandingEmberEffect />}
 
               {character.media.video && (
                 <video
@@ -197,6 +204,22 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
                           </span>
                         </ElectricBorder>
                       </span>
+                    </span>
+                  </div>
+                </>
+              ) : character.id === "candyandblood" ? (
+                <>
+                  <div className="theme-landing__label-layer theme-landing__label-layer--text theme-landing__label-layer--candyandblood-title">
+                    <span className="theme-landing__label theme-candyandblood-name">
+                      <span className="theme-candyandblood-name__line">Candy</span>
+                      <span className="theme-candyandblood-name__line">and</span>
+                      <span className="theme-candyandblood-name__line">Blood</span>
+                    </span>
+                  </div>
+                  <div className="theme-landing__label-layer theme-landing__label-layer--text theme-landing__label-layer--coming-soon">
+                    <span className="theme-landing__label theme-candyandblood-coming-soon">
+                      <span className="theme-candyandblood-name__line">Coming</span>
+                      <span className="theme-candyandblood-name__line">Soon...</span>
                     </span>
                   </div>
                 </>

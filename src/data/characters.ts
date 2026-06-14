@@ -73,6 +73,39 @@ export const characters: CharacterTheme[] = [
     },
   },
   {
+    id: "candyandblood",
+    name: "Candy And Blood",
+    tagline: "The hunt is endless now",
+    description:
+      "Yüzyıllar sonra özgür. Eski kan kül, zincirler toz. Ay ışığı avın üstünde dans ederken; şehir kan çiçekleriyle dolacak. Şeker mi vereceksin, kan mı? İkisine de doyamazlar.",
+    epithets: ["The Endless Hunt", "Garden of Blood"],
+    featuredLines: [
+      "At last... After centuries... I want to watch them burn.",
+      "BURN the masters. BURN the lords! BURN THEM ALL!",
+      "No more masters. No more chains.",
+      "This city will be our garden. Flowers of blood, so cute.",
+      "The Moonlight dances on prey. Shadows nesting on red.",
+      "Come a little closer. Just a step or two.",
+      "Sweet little heartbeat, running in the dark.",
+      "I want Candy and blood. I need Candy and BLOOOOOOOOOOOOD!",
+      "Not a dealbreaker, right?",
+    ],
+    colors: {
+      primary: "#c41e3a",
+      accent: "#4a0e0e",
+      glow: "#e85d75",
+      gradient: "linear-gradient(160deg, #030202 0%, #1a0508 45%, #2d0a12 100%)",
+    },
+    media: {
+      video: "",
+    },
+    images: {
+      landing: "/themes/candyandblood/images/cnb2.png",
+      hero: "/themes/candyandblood/images/cnbportrait.png",
+      portrait: "/themes/candyandblood/images/cnbportrait.png",
+    },
+  },
+  {
     id: "ember",
     name: "Ember",
     tagline: "Ateşin kalbi",

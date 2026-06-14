@@ -51,7 +51,13 @@ export function ThemeView({
   }, [featuredLines.length, character.id]);
 
   return (
-    <div className={cn("theme-view absolute inset-0", isWideHero && "theme-view--wide")}>
+    <div
+      className={cn(
+        "theme-view absolute inset-0",
+        isWideHero && "theme-view--wide",
+        character.id === "candyandblood" && "theme-view--candyandblood"
+      )}
+    >
       <div
         className={cn(
           "absolute inset-0",
@@ -103,7 +109,8 @@ export function ThemeView({
 
       <div
         className={cn(
-          "absolute inset-0",
+          "theme-view__content absolute inset-0",
+          isWideHero && "theme-view__content--wide",
           contentFadeIn && "theme-view__content--fade-in",
           !contentVisible && "invisible pointer-events-none opacity-0"
         )}
@@ -130,6 +137,7 @@ export function ThemeView({
                 alt={character.name}
                 character={character}
                 variant={character.images.heroLayout === "wide" ? "showcase-wide" : "showcase"}
+                showcaseFill={character.id === "candyandblood"}
               />
             )}
           </div>
@@ -176,7 +184,9 @@ export function ThemeView({
               className={cn(
                 "mb-5 text-4xl font-bold tracking-tight sm:text-5xl md:text-7xl",
                 character.id === "imperius" &&
-                  "theme-imperius-name theme-imperius-name--hero font-normal tracking-normal"
+                  "theme-imperius-name theme-imperius-name--hero font-normal tracking-normal",
+                character.id === "candyandblood" &&
+                  "theme-candyandblood-name theme-candyandblood-name--hero font-normal tracking-normal"
               )}
               style={{
                 color: character.colors.primary,
