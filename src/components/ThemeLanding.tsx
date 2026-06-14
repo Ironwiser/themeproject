@@ -24,6 +24,7 @@ const QUADRANTS: Quadrant[] = [
 export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
   const labelVideoRef = useRef<HTMLVideoElement>(null);
   const hoverVideoRef = useRef<HTMLVideoElement>(null);
+  const isHoveringTileRef = useRef(false);
 
   const imperius = characters.find((c) => c.id === "imperius");
 
@@ -32,14 +33,28 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
   }, [imperius?.media.video]);
 
   const handleTileEnter = () => {
+    isHoveringTileRef.current = true;
     const video = hoverVideoRef.current;
     if (!video) return;
+    video.loop = true;
     video.currentTime = 0;
     void video.play().catch(() => {});
   };
 
   const handleTileLeave = () => {
-    hoverVideoRef.current?.pause();
+    isHoveringTileRef.current = false;
+    const video = hoverVideoRef.current;
+    if (!video) return;
+    video.pause();
+    video.currentTime = 0;
+  };
+
+  const handleHoverVideoEnded = () => {
+    if (!isHoveringTileRef.current) return;
+    const video = hoverVideoRef.current;
+    if (!video) return;
+    video.currentTime = 0;
+    void video.play().catch(() => {});
   };
 
   const tiles = QUADRANTS.map((q) =>
@@ -94,6 +109,7 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
                   loop
                   playsInline
                   preload="auto"
+                  onEnded={handleHoverVideoEnded}
                   aria-hidden
                 />
               )}
