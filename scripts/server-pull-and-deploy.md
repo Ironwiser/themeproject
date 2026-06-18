@@ -49,10 +49,21 @@ chmod +x deploy.sh
 `deploy.sh` sırasıyla:
 
 1. `git pull`
-2. `node_modules` ve `dist` siler → `npm install` → `npm run build`
-3. `/var/www/themeproject` içindeki **eski canlı dosyaları** siler
-4. Yeni `dist/` içeriğini canlı dizine kopyalar
-5. nginx + certbot
+2. Yalnızca `node_modules` ve `dist` siler → `npm install` → `npm run build`
+3. **`/var/www/themeproject-live`** dizinini `rsync` ile günceller (proje dosyalarına dokunmaz)
+4. nginx + certbot
+
+**Önemli:** Canlı site asla proje kökü (`/var/www/themeproject`) olmamalı. Script bunu kontrol eder ve hata verir.
+
+---
+
+## Ortam değişkenleri (isteğe bağlı)
+
+```bash
+export THEMEPROJECT_DOMAIN="senindomain.com"
+export THEMEPROJECT_WEB_ROOT="/var/www/themeproject-live"
+./deploy.sh
+```
 
 ---
 
@@ -63,16 +74,6 @@ Mevcut sunucu koduyla build alıp yayınlamak için:
 ```bash
 cd /var/www/themeproject
 sed -i 's/\r$//' deploy.sh
-./deploy.sh
-```
-
----
-
-## Ortam değişkenleri (isteğe bağlı)
-
-```bash
-export THEMEPROJECT_DOMAIN="senindomain.com"
-export THEMEPROJECT_WEB_ROOT="/var/www/themeproject"
 ./deploy.sh
 ```
 

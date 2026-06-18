@@ -2,24 +2,73 @@
 # ThemeProject – statik site deploy (Vite build + nginx)
 # Proje kökünden: ./deploy.sh  veya  bash deploy.sh
 #
+# Kaynak kod:  /var/www/themeproject
+# Canlı site:  /var/www/themeproject-live  (nginx buraya bakar)
+#
 # Ortam değişkenleri (isteğe bağlı):
 #   THEMEPROJECT_DOMAIN   varsayılan: themeproject.omurgenc.dev
-#   THEMEPROJECT_WEB_ROOT varsayılan: /var/www/themeproject
+#   THEMEPROJECT_WEB_ROOT varsayılan: /var/www/themeproject-live
 
 set -e
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT_DIR"
 
 DOMAIN="${THEMEPROJECT_DOMAIN:-themeproject.omurgenc.dev}"
-WEB_ROOT="${THEMEPROJECT_WEB_ROOT:-/var/www/themeproject}"
+WEB_ROOT="${THEMEPROJECT_WEB_ROOT:-/var/www/themeproject-live}"
 NGINX_SITE="themeproject.conf"
+
+resolve_path() {
+  local target="$1"
+  if command -v realpath &>/dev/null; then
+    realpath -m "$target" 2>/dev/null && return
+  fi
+  if command -v readlink &>/dev/null; then
+    readlink -f "$target" 2>/dev/null && return
+  fi
+  echo "$target"
+}
+
+assert_safe_web_root() {
+  local root_real web_real
+  root_real="$(resolve_path "$ROOT_DIR")"
+  web_real="$(resolve_path "$WEB_ROOT")"
+
+  if [ -z "$web_real" ] || [ "$web_real" = "/" ]; then
+    echo "HATA: Geçersiz WEB_ROOT ($WEB_ROOT)."
+    exit 1
+  fi
+
+  if [ "$web_real" = "$root_real" ]; then
+    echo "HATA: WEB_ROOT proje köküyle aynı olamaz."
+    echo "  Proje: $root_real"
+    echo "  Canlı: $web_real"
+    exit 1
+  fi
+
+  case "$web_real" in
+    "$root_real"/*)
+      echo "HATA: WEB_ROOT proje klasörünün içinde olamaz (kaynak kod silinir)."
+      exit 1
+      ;;
+  esac
+
+  case "$root_real" in
+    "$web_real"/*)
+      echo "HATA: WEB_ROOT proje klasörünün üst dizini olamaz (deploy.sh ve repo silinir)."
+      echo "  Örnek yanlış: WEB_ROOT=/var/www  proje=/var/www/themeproject"
+      exit 1
+      ;;
+  esac
+}
+
+assert_safe_web_root
 
 echo "→ Git'ten son değişiklikler çekiliyor (git pull)"
 if [ -d ".git" ]; then
   git pull || echo "  UYARI: git pull başarısız oldu, local değişiklikler olabilir."
 fi
 
-echo "→ Eski node_modules ve dist siliniyor, npm install + build"
+echo "→ Build için yalnızca node_modules ve dist temizleniyor"
 rm -rf node_modules dist
 npm install
 npm run build
@@ -29,12 +78,17 @@ if [ ! -d "dist" ]; then
   exit 1
 fi
 
-echo "→ Canlı dizinde eski dosyalar siliniyor: $WEB_ROOT"
+echo "→ Canlı site güncelleniyor (yalnızca $WEB_ROOT): $WEB_ROOT"
 sudo mkdir -p "$WEB_ROOT"
-sudo rm -rf "${WEB_ROOT:?}/"*
 
-echo "→ Yeni build canlı dizine kopyalanıyor"
-sudo cp -a dist/. "$WEB_ROOT/"
+if command -v rsync &>/dev/null; then
+  sudo rsync -a --delete dist/ "$WEB_ROOT/"
+else
+  echo "  rsync yok; find + cp kullanılıyor"
+  sudo find "$WEB_ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+  sudo cp -a dist/. "$WEB_ROOT/"
+fi
+
 sudo chown -R www-data:www-data "$WEB_ROOT" 2>/dev/null || true
 
 echo "→ Nginx konfigürasyonu yazılıyor..."
@@ -85,5 +139,6 @@ fi
 
 echo ""
 echo "Deploy tamamlandı."
-echo "Site:  http://$DOMAIN"
-echo "Kök:   $WEB_ROOT"
+echo "Kaynak: $ROOT_DIR"
+echo "Canlı:  $WEB_ROOT"
+echo "Site:   http://$DOMAIN"
