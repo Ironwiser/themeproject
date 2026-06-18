@@ -1,7 +1,10 @@
 import { useMemo, type CSSProperties } from "react";
 import { LandingFireCanvas } from "./LandingFireCanvas";
 import { cn } from "../lib/utils";
+
 const EMBER_COUNT = 12;
+const TAB_EMBER_COUNT = 6;
+const TAB_BOOST_MULTIPLIER = 5;
 
 type EmberParticle = {
   id: number;
@@ -14,28 +17,48 @@ type EmberParticle = {
 
 type LandingEmberEffectProps = {
   className?: string;
+  density?: "default" | "compact" | "tab" | "tab-boost";
 };
 
-function createEmber(id: number): EmberParticle {
+function createEmber(id: number, speedMultiplier = 1, spreadWide = false): EmberParticle {
+  const baseDuration = 2 + Math.random() * 3;
   return {
     id,
-    left: 35 + Math.random() * 30,
+    left: spreadWide ? 6 + Math.random() * 88 : 35 + Math.random() * 30,
     size: 1.5 + Math.random() * 1.5,
-    duration: 2 + Math.random() * 3,
-    delay: Math.random() * 3,
+    duration: baseDuration / speedMultiplier,
+    delay: Math.random() * 3 / speedMultiplier,
     drift: Math.random() * 2 - 1,
   };
 }
 
-export function LandingEmberEffect({ className }: LandingEmberEffectProps) {
+export function LandingEmberEffect({ className, density = "default" }: LandingEmberEffectProps) {
+  const isTabBoost = density === "tab-boost";
+  const emberCount =
+    density === "default"
+      ? EMBER_COUNT
+      : isTabBoost
+        ? TAB_EMBER_COUNT * TAB_BOOST_MULTIPLIER
+        : TAB_EMBER_COUNT;
+  const fireDensity = density === "tab" || isTabBoost ? "subtle" : density === "compact" ? "compact" : "default";
+  const speedMultiplier = isTabBoost ? TAB_BOOST_MULTIPLIER : 1;
+  const countMultiplier = isTabBoost ? TAB_BOOST_MULTIPLIER : 1;
   const embers = useMemo(
-    () => Array.from({ length: EMBER_COUNT }, (_, index) => createEmber(index)),
-    []
+    () => Array.from({ length: emberCount }, (_, index) => createEmber(index, speedMultiplier, isTabBoost)),
+    [emberCount, isTabBoost, speedMultiplier]
   );
 
   return (
-    <div className={cn("theme-landing-ember", className)} aria-hidden="true">
-      <LandingFireCanvas />
+    <div
+      className={cn("theme-landing-ember", density !== "default" && "theme-landing-ember--compact", className)}
+      aria-hidden="true"
+    >
+      <LandingFireCanvas
+        density={fireDensity}
+        speedMultiplier={speedMultiplier}
+        countMultiplier={countMultiplier}
+        fullSpread={isTabBoost}
+      />
       <div className="theme-landing-ember__glow" />
       <div className="theme-landing-ember__embers">
         {embers.map((ember) => (
@@ -47,8 +70,8 @@ export function LandingEmberEffect({ className }: LandingEmberEffectProps) {
                 left: `${ember.left}%`,
                 width: `${ember.size}px`,
                 height: `${ember.size}px`,
-                animationDuration: `${ember.duration}s`,
                 animationDelay: `${ember.delay}s`,
+                animationDuration: `${ember.duration}s`,
                 "--ember-drift": String(ember.drift),
               } as CSSProperties
             }

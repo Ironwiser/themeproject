@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { getCharacterDisplayName, type CharacterTheme } from "../data/characters";
 import { THEME_DEBUG_NO_EFFECTS } from "../config/debug";
@@ -30,10 +30,35 @@ export function ThemeView({
   const galleryImages = character.images?.gallery ?? [];
   const featuredLines = character.featuredLines ?? [];
   const isWideHero = character.images?.heroLayout === "wide";
+  const heroVideoSrc = character.images?.heroVideo;
+  const showBgVideo = Boolean(character.media.video) && !heroVideoSrc;
   const { videoRef, setVideoReady } = useThemeMedia({
     character,
-    isActive: backgroundActive,
+    isActive: backgroundActive && showBgVideo,
   });
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video || !heroVideoSrc) return;
+
+    if (!backgroundActive) {
+      video.pause();
+      return;
+    }
+
+    const play = () => {
+      void video.play().catch(() => {});
+    };
+
+    if (video.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) play();
+    else video.addEventListener("canplay", play, { once: true });
+
+    return () => {
+      video.removeEventListener("canplay", play);
+      video.pause();
+    };
+  }, [heroVideoSrc, backgroundActive, character.id]);
 
   useEffect(() => {
     setLineIndex(0);
@@ -55,7 +80,8 @@ export function ThemeView({
       className={cn(
         "theme-view absolute inset-0",
         isWideHero && "theme-view--wide",
-        character.id === "candyandblood" && "theme-view--candyandblood"
+        character.id === "candyandblood" && "theme-view--candyandblood",
+        character.id === "quickshover" && "theme-view--quickshover"
       )}
     >
       <div
@@ -71,7 +97,7 @@ export function ThemeView({
           }}
         />
 
-        {!THEME_DEBUG_NO_EFFECTS && (
+        {!THEME_DEBUG_NO_EFFECTS && showBgVideo && (
           <video
             key={character.id}
             ref={videoRef}
@@ -80,6 +106,7 @@ export function ThemeView({
             muted
             loop
             playsInline
+            preload="auto"
             onCanPlay={() => setVideoReady(true)}
           />
         )}
@@ -116,29 +143,44 @@ export function ThemeView({
         )}
         style={contentFadeIn ? { animationDuration: "3000ms" } : undefined}
       >
-        {character.images?.hero && (
+        {(character.images?.hero || heroVideoSrc) && (
           <div
             className={cn(
               "theme-showcase-layer",
-              character.images.heroLayout === "wide" && "theme-showcase-layer--wide"
+              character.images?.heroLayout === "wide" && "theme-showcase-layer--wide",
+              heroVideoSrc && "theme-showcase-layer--hero-video"
             )}
           >
             {THEME_DEBUG_NO_EFFECTS ? (
               <img
-                src={character.images.hero}
+                src={character.images?.hero}
                 alt={character.name}
                 className={cn("theme-hero-plain", isWideHero && "theme-hero-plain--wide")}
                 decoding="sync"
                 draggable={false}
               />
-            ) : (
-              <ThemeImageFrame
-                src={character.images.hero}
-                alt={character.name}
-                character={character}
-                variant={character.images.heroLayout === "wide" ? "showcase-wide" : "showcase"}
-                showcaseFill={character.id === "candyandblood"}
+            ) : heroVideoSrc ? (
+              <video
+                ref={heroVideoRef}
+                className="theme-hero-video"
+                src={heroVideoSrc}
+                muted
+                loop
+                playsInline
+                autoPlay
+                preload="auto"
+                aria-label={character.name}
               />
+            ) : (
+              character.images?.hero && (
+                <ThemeImageFrame
+                  src={character.images.hero}
+                  alt={character.name}
+                  character={character}
+                  variant={character.images.heroLayout === "wide" ? "showcase-wide" : "showcase"}
+                  showcaseFill={character.id === "candyandblood"}
+                />
+              )
             )}
           </div>
         )}

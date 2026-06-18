@@ -16,16 +16,25 @@ const TabsList = React.forwardRef<
 ));
 TabsList.displayName = TabsPrimitive.List.displayName;
 
+type TabsTriggerProps = React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger> & {
+  overlay?: React.ReactNode;
+  labelGlow?: React.ReactNode;
+};
+
 const TabsTrigger = React.forwardRef<
   React.ElementRef<typeof TabsPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof TabsPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+  TabsTriggerProps
+>(({ className, children, overlay, labelGlow, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn("theme-tab-trigger", className)}
     {...props}
   >
-    <span className="theme-tab-trigger__label">{children}</span>
+    {overlay}
+    <span className="theme-tab-trigger__label">
+      {labelGlow}
+      {children}
+    </span>
   </TabsPrimitive.Trigger>
 ));
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;

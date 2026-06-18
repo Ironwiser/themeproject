@@ -18,6 +18,7 @@ export type CharacterTheme = {
   };
   images?: {
     hero: string;
+    heroVideo?: string;
     heroLayout?: "portrait" | "wide";
     portrait?: string;
     landing?: string;
@@ -61,7 +62,7 @@ export const characters: CharacterTheme[] = [
       hero: "/themes/imperius/images/ultrawide22.png",
       heroLayout: "wide",
       portrait: "/themes/imperius/images/imperius_left_portrait.png",
-      landing: "/themes/imperius/images/impmain3.png",
+      landing: "/themes/imperius/images/imperimainwide.png",
       introFrame: "/themes/imperius/images/imperiusstartframe.png",
       gallery: [
         "/themes/imperius/images/impmoon.png",
@@ -98,11 +99,34 @@ export const characters: CharacterTheme[] = [
     },
     media: {
       video: "",
+      music: "/themes/candyandblood/music.mp3",
     },
     images: {
       landing: "/themes/candyandblood/images/cnb2.png",
       hero: "/themes/candyandblood/images/cnbportrait.png",
+      heroVideo: "/themes/candyandblood/cnbwideloop.mp4",
       portrait: "/themes/candyandblood/images/cnbportrait.png",
+    },
+  },
+  {
+    id: "quickshover",
+    name: "Quick Shover",
+    tagline: "Coming soon",
+    description: "Quick Shover teması yakında.",
+    colors: {
+      primary: "#facc15",
+      accent: "#ca8a04",
+      glow: "#fde047",
+      gradient: "linear-gradient(160deg, #0a0800 0%, #1a1400 45%, #3f2f00 100%)",
+    },
+    media: {
+      video: "/themes/quickshover/clockswithreverse.mp4",
+    },
+    images: {
+      landing: "/themes/quickshover/images/quickshowerwide.png",
+      hero: "/themes/quickshover/images/quickshowerwide.png",
+      heroLayout: "wide",
+      portrait: "/themes/quickshover/images/quickshowerwide.png",
     },
   },
   {

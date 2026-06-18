@@ -31,21 +31,63 @@ function clonePalette(base: Rgb[]): Rgb[] {
   return base.map((color) => ({ ...color }));
 }
 
-function createParticle(width: number, height: number, paletteLength: number): FireParticle {
+type FireDensity = "default" | "compact" | "subtle";
+
+function createParticle(
+  width: number,
+  height: number,
+  paletteLength: number,
+  density: FireDensity = "default",
+  fullSpread = false
+): FireParticle {
+  const presets: Record<
+    FireDensity,
+    Pick<FireParticle, "size" | "opacity" | "speedX" | "speedY" | "rotationSpeed" | "sway" | "swaySpeed" | "lifespan">
+  > = {
+    default: {
+      size: 5 + Math.random() * 14,
+      opacity: 0.2 + Math.random() * 0.5,
+      speedX: (Math.random() - 0.5) * 1.4,
+      speedY: -1.4 - Math.random() * 2.8,
+      rotationSpeed: (Math.random() - 0.5) * 0.025,
+      sway: 0.35 + Math.random() * 0.55,
+      swaySpeed: 0.005 + Math.random() * 0.012,
+      lifespan: 110 + Math.random() * 180,
+    },
+    compact: {
+      size: 3 + Math.random() * 7,
+      opacity: 0.15 + Math.random() * 0.35,
+      speedX: (Math.random() - 0.5) * 0.9,
+      speedY: -0.9 - Math.random() * 1.6,
+      rotationSpeed: (Math.random() - 0.5) * 0.018,
+      sway: 0.28 + Math.random() * 0.42,
+      swaySpeed: 0.004 + Math.random() * 0.009,
+      lifespan: 70 + Math.random() * 90,
+    },
+    subtle: {
+      size: 1.5 + Math.random() * 3,
+      opacity: 0.1 + Math.random() * 0.18,
+      speedX: (Math.random() - 0.5) * 0.35,
+      speedY: -0.28 - Math.random() * 0.55,
+      rotationSpeed: (Math.random() - 0.5) * 0.008,
+      sway: 0.12 + Math.random() * 0.22,
+      swaySpeed: 0.002 + Math.random() * 0.004,
+      lifespan: 120 + Math.random() * 140,
+    },
+  };
+
+  const preset = presets[density];
+  const spawnY = fullSpread
+    ? Math.random() * height * 0.92 + height * 0.04
+    : height * 0.45 + Math.random() * height * 0.65;
+
   return {
     x: Math.random() * width,
-    y: height * 0.45 + Math.random() * height * 0.65,
-    size: 5 + Math.random() * 14,
-    opacity: 0.2 + Math.random() * 0.5,
-    speedX: (Math.random() - 0.5) * 1.4,
-    speedY: -1.4 - Math.random() * 2.8,
+    y: spawnY,
     colorIndex: Math.floor(Math.random() * paletteLength),
     rotation: Math.random() * Math.PI * 2,
-    rotationSpeed: (Math.random() - 0.5) * 0.025,
-    sway: 0.35 + Math.random() * 0.55,
-    swaySpeed: 0.005 + Math.random() * 0.012,
     swayOffset: Math.random() * Math.PI * 2,
-    lifespan: 110 + Math.random() * 180,
+    ...preset,
   };
 }
 
@@ -85,9 +127,19 @@ function drawBrushstroke(
 
 type LandingFireCanvasProps = {
   className?: string;
+  density?: FireDensity;
+  speedMultiplier?: number;
+  countMultiplier?: number;
+  fullSpread?: boolean;
 };
 
-export function LandingFireCanvas({ className }: LandingFireCanvasProps) {
+export function LandingFireCanvas({
+  className,
+  density = "default",
+  speedMultiplier = 1,
+  countMultiplier = 1,
+  fullSpread = false,
+}: LandingFireCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -118,12 +170,18 @@ export function LandingFireCanvas({ className }: LandingFireCanvasProps) {
       canvas.style.height = `${height}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+      const baseCount =
+        density === "subtle"
+          ? Math.min(12, Math.max(4, Math.floor((width * height) / 10000)))
+          : density === "compact"
+            ? Math.min(28, Math.max(10, Math.floor((width * height) / 4200)))
+            : Math.min(140, Math.max(38, Math.floor((width * height) / 1800)));
       const targetCount = Math.min(
-        140,
-        Math.max(38, Math.floor((width * height) / 1800))
+        density === "subtle" ? 60 : density === "compact" ? 140 : 700,
+        Math.max(1, Math.floor(baseCount * countMultiplier))
       );
       particles = Array.from({ length: targetCount }, () =>
-        createParticle(width, height, PALETTE_BASE.length)
+        createParticle(width, height, PALETTE_BASE.length, density, fullSpread)
       );
     };
 
@@ -139,13 +197,15 @@ export function LandingFireCanvas({ className }: LandingFireCanvasProps) {
       });
     };
 
-    const updateParticles = () => {
+    const updateParticles = (speedBoost: number) => {
       for (let i = 0; i < particles.length; i += 1) {
         const particle = particles[i];
-        particle.x += particle.speedX + Math.sin(time * particle.swaySpeed + particle.swayOffset) * particle.sway;
-        particle.y += particle.speedY;
-        particle.rotation += particle.rotationSpeed;
-        particle.lifespan -= 1;
+        particle.x +=
+          (particle.speedX + Math.sin(time * particle.swaySpeed + particle.swayOffset) * particle.sway) *
+          speedBoost;
+        particle.y += particle.speedY * speedBoost;
+        particle.rotation += particle.rotationSpeed * speedBoost;
+        particle.lifespan -= speedBoost;
 
         const lifeFactor = particle.lifespan / 300;
         const currentSize = particle.size * lifeFactor;
@@ -164,7 +224,7 @@ export function LandingFireCanvas({ className }: LandingFireCanvasProps) {
         }
 
         if (particle.lifespan <= 0 || particle.y < -40) {
-          particles[i] = createParticle(width, height, PALETTE_BASE.length);
+          particles[i] = createParticle(width, height, PALETTE_BASE.length, density, fullSpread);
         }
       }
     };
@@ -172,9 +232,9 @@ export function LandingFireCanvas({ className }: LandingFireCanvasProps) {
     const animate = () => {
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = "lighter";
-      time += 0.012;
+      time += (density === "subtle" ? 0.007 : 0.012) * speedMultiplier;
       updatePalette();
-      updateParticles();
+      updateParticles(speedMultiplier);
       ctx.globalCompositeOperation = "source-over";
       rafId = window.requestAnimationFrame(animate);
     };
@@ -188,7 +248,7 @@ export function LandingFireCanvas({ className }: LandingFireCanvasProps) {
       observer.disconnect();
       window.cancelAnimationFrame(rafId);
     };
-  }, []);
+  }, [countMultiplier, density, fullSpread, speedMultiplier]);
 
   return (
     <div ref={containerRef} className={cn("theme-landing-fire-canvas", className)} aria-hidden="true">
@@ -196,3 +256,4 @@ export function LandingFireCanvas({ className }: LandingFireCanvasProps) {
     </div>
   );
 }
+
