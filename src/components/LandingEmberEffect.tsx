@@ -17,7 +17,7 @@ type EmberParticle = {
 
 type LandingEmberEffectProps = {
   className?: string;
-  density?: "default" | "compact" | "tab" | "tab-boost";
+  density?: "default" | "compact" | "tab" | "tab-boost" | "preview-boost";
 };
 
 function createEmber(id: number, speedMultiplier = 1, spreadWide = false): EmberParticle {
@@ -33,19 +33,22 @@ function createEmber(id: number, speedMultiplier = 1, spreadWide = false): Ember
 }
 
 export function LandingEmberEffect({ className, density = "default" }: LandingEmberEffectProps) {
+  const isPreviewBoost = density === "preview-boost";
   const isTabBoost = density === "tab-boost";
+  const isBoost = isTabBoost || isPreviewBoost;
   const emberCount =
     density === "default"
       ? EMBER_COUNT
-      : isTabBoost
+      : isBoost
         ? TAB_EMBER_COUNT * TAB_BOOST_MULTIPLIER
         : TAB_EMBER_COUNT;
-  const fireDensity = density === "tab" || isTabBoost ? "subtle" : density === "compact" ? "compact" : "default";
-  const speedMultiplier = isTabBoost ? TAB_BOOST_MULTIPLIER : 1;
-  const countMultiplier = isTabBoost ? TAB_BOOST_MULTIPLIER : 1;
+  const fireDensity =
+    isPreviewBoost ? "default" : density === "tab" || isTabBoost ? "subtle" : density === "compact" ? "compact" : "default";
+  const speedMultiplier = isBoost ? TAB_BOOST_MULTIPLIER : 1;
+  const countMultiplier = isBoost ? TAB_BOOST_MULTIPLIER : 1;
   const embers = useMemo(
-    () => Array.from({ length: emberCount }, (_, index) => createEmber(index, speedMultiplier, isTabBoost)),
-    [emberCount, isTabBoost, speedMultiplier]
+    () => Array.from({ length: emberCount }, (_, index) => createEmber(index, speedMultiplier, isBoost)),
+    [emberCount, isBoost, speedMultiplier]
   );
 
   return (
@@ -57,7 +60,7 @@ export function LandingEmberEffect({ className, density = "default" }: LandingEm
         density={fireDensity}
         speedMultiplier={speedMultiplier}
         countMultiplier={countMultiplier}
-        fullSpread={isTabBoost}
+        fullSpread={isBoost}
       />
       <div className="theme-landing-ember__glow" />
       <div className="theme-landing-ember__embers">

@@ -1,11 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { getCharacterDisplayName, type CharacterTheme } from "../data/characters";
-import { LandingEmberEffect } from "./LandingEmberEffect";
+import { useIsMobile } from "../hooks/useIsMobile";
 import { LandingEmberTabLabel } from "./LandingEmberTabLabel";
 import { LandingEmberTabLabelGlow } from "./LandingEmberTabLabelGlow";
 import { LandingImperiusTabEffect } from "./LandingImperiusTabEffect";
 import { LandingImperiusTabElectricBorder } from "./LandingImperiusTabElectricBorder";
-import { LandingTabEmberStack, type TabEmberBoostPhase } from "./LandingTabEmberStack";
+import {
+  LandingPreviewEmberStack,
+  LandingTabEmberStack,
+  type TabEmberBoostPhase,
+} from "./LandingTabEmberStack";
+import { LandingQuickshoverTabLabelGlow } from "./LandingQuickshoverTabLabelGlow";
 import { LandingVideoLabel } from "./LandingVideoLabel";
 import { ThemeImageFrame } from "./ThemeImageFrame";
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
@@ -73,19 +78,41 @@ type LandingPreviewCellProps = {
 };
 
 function LandingPreviewCell({ character, onSelect }: LandingPreviewCellProps) {
+  const isMobile = useIsMobile();
   const labelVideoRef = useRef<HTMLVideoElement>(null);
   const hoverVideoRef = useRef<HTMLVideoElement>(null);
   const isHoveringTileRef = useRef(false);
-  const [emberLight, setEmberLight] = useState(false);
+  const previewBoostFadeTimerRef = useRef<number | undefined>(undefined);
+  const [previewBoostPhase, setPreviewBoostPhase] = useState<TabEmberBoostPhase>("off");
   const isCnbPreview = character.id === "candyandblood";
+  const isQuickshoverPreview = character.id === "quickshover";
+  const landingEffectsEnabled = !isMobile;
+  const previewVideosEnabled = landingEffectsEnabled && Boolean(character.media.video);
+  const cnbPreviewEffectsEnabled = landingEffectsEnabled && isCnbPreview;
   const imageSrc = character.images?.landing ?? character.images?.portrait;
   const displayName = getCharacterDisplayName(character);
   const videoLabel = getLandingVideoLabel(character);
-  const showVideoLabel = hasLandingVideoLabel(character.id);
+  const showStyledVideoLabel = hasLandingVideoLabel(character.id);
+  const showVideoLabel = showStyledVideoLabel;
+
+  useEffect(() => {
+    return () => window.clearTimeout(previewBoostFadeTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!landingEffectsEnabled) {
+      window.clearTimeout(previewBoostFadeTimerRef.current);
+      setPreviewBoostPhase("off");
+      isHoveringTileRef.current = false;
+    }
+  }, [landingEffectsEnabled]);
 
   const handleTileEnter = () => {
     isHoveringTileRef.current = true;
-    if (isCnbPreview) setEmberLight(true);
+    if (cnbPreviewEffectsEnabled) {
+      window.clearTimeout(previewBoostFadeTimerRef.current);
+      setPreviewBoostPhase("on");
+    }
     const video = hoverVideoRef.current;
     if (!video) return;
     video.loop = true;
@@ -95,7 +122,13 @@ function LandingPreviewCell({ character, onSelect }: LandingPreviewCellProps) {
 
   const handleTileLeave = () => {
     isHoveringTileRef.current = false;
-    if (isCnbPreview) setEmberLight(false);
+    if (cnbPreviewEffectsEnabled) {
+      setPreviewBoostPhase("fading");
+      previewBoostFadeTimerRef.current = window.setTimeout(
+        () => setPreviewBoostPhase("off"),
+        CNB_BOOST_FADE_MS
+      );
+    }
     const video = hoverVideoRef.current;
     if (!video) return;
     video.pause();
@@ -119,14 +152,15 @@ function LandingPreviewCell({ character, onSelect }: LandingPreviewCellProps) {
         "theme-landing__cell theme-landing__cell--active theme-landing__cell--stage",
         character.id === "imperius" && "theme-landing__cell--fit-cover theme-landing__cell--imperius-preview",
         character.id === "candyandblood" && "theme-landing__cell--fit-cover theme-landing__cell--ember",
-        isCnbPreview && emberLight && "theme-landing__cell--ember-lit",
-        character.id === "quickshover" && "theme-landing__cell--fit-cover"
+        cnbPreviewEffectsEnabled && previewBoostPhase === "on" && "theme-landing__cell--ember-lit",
+        cnbPreviewEffectsEnabled && previewBoostPhase === "fading" && "theme-landing__cell--ember-fading",
+        character.id === "quickshover" && "theme-landing__cell--fit-cover theme-landing__cell--quickshover-preview"
       )}
       onClick={() => onSelect(character.id)}
-      onMouseEnter={isCnbPreview || character.media.video ? handleTileEnter : undefined}
-      onMouseLeave={isCnbPreview || character.media.video ? handleTileLeave : undefined}
-      onFocus={isCnbPreview || character.media.video ? handleTileEnter : undefined}
-      onBlur={isCnbPreview || character.media.video ? handleTileLeave : undefined}
+      onMouseEnter={cnbPreviewEffectsEnabled || previewVideosEnabled ? handleTileEnter : undefined}
+      onMouseLeave={cnbPreviewEffectsEnabled || previewVideosEnabled ? handleTileLeave : undefined}
+      onFocus={cnbPreviewEffectsEnabled || previewVideosEnabled ? handleTileEnter : undefined}
+      onBlur={cnbPreviewEffectsEnabled || previewVideosEnabled ? handleTileLeave : undefined}
       style={
         {
           "--tile-primary": character.colors.primary,
@@ -144,9 +178,11 @@ function LandingPreviewCell({ character, onSelect }: LandingPreviewCellProps) {
           className="theme-landing__frame"
         />
 
-        {character.id === "candyandblood" && <LandingEmberEffect />}
+        {cnbPreviewEffectsEnabled && (
+          <LandingPreviewEmberStack boostPhase={previewBoostPhase} />
+        )}
 
-        {character.media.video && (
+        {previewVideosEnabled && (
           <video
             ref={hoverVideoRef}
             className="theme-landing__lightning"
@@ -161,7 +197,12 @@ function LandingPreviewCell({ character, onSelect }: LandingPreviewCellProps) {
         )}
 
         {showVideoLabel ? (
-          <LandingVideoLabel character={character} label={videoLabel} labelVideoRef={labelVideoRef} />
+          <LandingVideoLabel
+            character={character}
+            label={videoLabel}
+            labelVideoRef={labelVideoRef}
+            effectsEnabled={landingEffectsEnabled}
+          />
         ) : character.id === "candyandblood" ? (
           <>
             <div className="theme-landing__label-layer theme-landing__label-layer--text theme-landing__label-layer--candyandblood-title">
@@ -189,6 +230,8 @@ function LandingPreviewCell({ character, onSelect }: LandingPreviewCellProps) {
 }
 
 export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
+  const isMobile = useIsMobile();
+  const landingEffectsEnabled = !isMobile;
   const [activeSlot, setActiveSlot] = useState<LandingSlotPosition>("top-left");
   const [cnbBoostPhase, setCnbBoostPhase] = useState<TabEmberBoostPhase>("off");
   const [imperiusTabHover, setImperiusTabHover] = useState(false);
@@ -197,6 +240,14 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
   useEffect(() => {
     return () => window.clearTimeout(cnbBoostFadeTimerRef.current);
   }, []);
+
+  useEffect(() => {
+    if (!landingEffectsEnabled) {
+      window.clearTimeout(cnbBoostFadeTimerRef.current);
+      setCnbBoostPhase("off");
+      setImperiusTabHover(false);
+    }
+  }, [landingEffectsEnabled]);
 
   const handleCnbTabEnter = () => {
     window.clearTimeout(cnbBoostFadeTimerRef.current);
@@ -235,7 +286,11 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
   } as CSSProperties;
 
   return (
-    <div className="theme-landing" role="dialog" aria-label="Karakter seçimi">
+    <div
+      className={cn("theme-landing", isMobile && "theme-landing--mobile")}
+      role="dialog"
+      aria-label="Karakter seçimi"
+    >
       <div className="theme-landing__stage">
         {activeTile.character ? (
           <LandingPreviewCell character={activeTile.character} onSelect={onSelect} />
@@ -256,30 +311,30 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
                 key={slot.position}
                 value={slot.position}
                 onMouseEnter={
-                  slot.character?.id === "candyandblood"
+                  landingEffectsEnabled && slot.character?.id === "candyandblood"
                     ? () => handleCnbTabEnter()
-                    : slot.character?.id === "imperius"
+                    : landingEffectsEnabled && slot.character?.id === "imperius"
                       ? () => setImperiusTabHover(true)
                       : undefined
                 }
                 onMouseLeave={
-                  slot.character?.id === "candyandblood"
+                  landingEffectsEnabled && slot.character?.id === "candyandblood"
                     ? () => handleCnbTabLeave()
-                    : slot.character?.id === "imperius"
+                    : landingEffectsEnabled && slot.character?.id === "imperius"
                       ? () => setImperiusTabHover(false)
                       : undefined
                 }
                 onFocus={
-                  slot.character?.id === "candyandblood"
+                  landingEffectsEnabled && slot.character?.id === "candyandblood"
                     ? () => handleCnbTabEnter()
-                    : slot.character?.id === "imperius"
+                    : landingEffectsEnabled && slot.character?.id === "imperius"
                       ? () => setImperiusTabHover(true)
                       : undefined
                 }
                 onBlur={
-                  slot.character?.id === "candyandblood"
+                  landingEffectsEnabled && slot.character?.id === "candyandblood"
                     ? () => handleCnbTabLeave()
-                    : slot.character?.id === "imperius"
+                    : landingEffectsEnabled && slot.character?.id === "imperius"
                       ? () => setImperiusTabHover(false)
                       : undefined
                 }
@@ -292,20 +347,26 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
                   !slot.character && "theme-landing__tab--empty"
                 )}
                 overlay={
-                  slot.character?.id === "candyandblood" ? (
+                  landingEffectsEnabled && slot.character?.id === "candyandblood" ? (
                     <LandingTabEmberStack boostPhase={cnbBoostPhase} />
-                  ) : slot.character?.id === "imperius" && slot.character.media.video ? (
+                  ) : landingEffectsEnabled && slot.character?.id === "imperius" ? (
                     <>
-                      <LandingImperiusTabEffect videoSrc={slot.character.media.video} />
+                      {slot.character.media.video ? (
+                        <LandingImperiusTabEffect videoSrc={slot.character.media.video} />
+                      ) : null}
                       <LandingImperiusTabElectricBorder triple={imperiusTabHover} />
                     </>
-                  ) : slot.character?.id === "quickshover" && slot.character.media.video ? (
+                  ) : landingEffectsEnabled &&
+                    slot.character?.id === "quickshover" &&
+                    slot.character.media.video ? (
                     <LandingImperiusTabEffect videoSrc={slot.character.media.video} />
                   ) : undefined
                 }
                 labelGlow={
-                  slot.character?.id === "candyandblood" ? (
+                  landingEffectsEnabled && slot.character?.id === "candyandblood" ? (
                     <LandingEmberTabLabelGlow lit={cnbBoostPhase === "on"} />
+                  ) : slot.character?.id === "quickshover" ? (
+                    <LandingQuickshoverTabLabelGlow />
                   ) : undefined
                 }
                 style={
@@ -339,6 +400,8 @@ export function ThemeLanding({ characters, onSelect }: ThemeLandingProps) {
               >
                 {slot.character?.id === "candyandblood" ? (
                   <LandingEmberTabLabel label={getSlotTabLabel(slot)} />
+                ) : slot.character?.id === "quickshover" ? (
+                  <span className="theme-tab-quickshover-label__text">{getSlotTabLabel(slot)}</span>
                 ) : (
                   getSlotTabLabel(slot)
                 )}

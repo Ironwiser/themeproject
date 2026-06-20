@@ -121,6 +121,7 @@ export const characters: CharacterTheme[] = [
     },
     media: {
       video: "/themes/quickshover/clockswithreverse.mp4",
+      music: "/themes/quickshover/JustaQuickShower.mp3",
     },
     images: {
       landing: "/themes/quickshover/images/quickshowerwide.png",
